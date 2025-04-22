@@ -1,0 +1,47 @@
+#!/bin/bash
+
+target=$1
+rev=1
+kver="$(make kernelversion)-watter-$rev"
+
+function usage()
+{
+	echo "Pick one of: apollo" 1>&2
+	exit 1
+}
+
+case "$1" in
+apollo)
+	export KDEB_PACKAGEEXT=apollo-${rev}
+	export KBUILD_IMAGE=arch/arm64/boot/Image.gz
+	;;
+*)
+	usage
+esac
+
+case "$1" in
+*)
+	image=bindeb-pkg
+	export KDEB_CHANGELOG_DIST=trixie
+	export KDEB_SOURCENAME=linux-watter
+	export KDEB_PKGVERSION=$kver
+	export EMAIL="bcollins@watter.com"
+	export NAME="Ben Collins"
+	;;
+esac
+
+cpus=`getconf _NPROCESSORS_ONLN`
+nway=`echo "($cpus * 15) / 10" | bc`
+dir="`pwd`/build-$target"
+
+export HOSTCC=gcc
+export CC=gcc
+
+export MAKEFLAGS="O=$dir -j$nway KERNELRELEASE=$kver"
+
+if ! test -f "$dir/.config"; then
+	test -d "$dir" || mkdir "$dir"
+	cp "watter-configs/$target" "$dir/.config"
+fi
+
+make $image
