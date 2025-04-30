@@ -503,7 +503,7 @@ Params: activelow               Set to "on" to invert the sense of the LED
 Name:   ad7998
 Info:   Configures the AD7998 ADC
 Load:   dtoverlay=ad7998,<param>=<val>
-Params: addr                    I2C address of the MCP23017 (default: 0x20)
+Params: addr                    I2C address of the AD7998 (default: 0x23)
 
         i2c-bus                 Supports all the standard I2C bus selection
                                 parameters - see "dtoverlay -h i2c-bus"
@@ -5195,6 +5195,13 @@ Params: speed                   Display SPI bus speed
             Old touch display:
                 dtoverlay=tinylcd35,touch,touchgpio=3
 
+Name:   tmp116
+Info:   Configures the TMP116 Temperature Sensor
+Load:   dtoverlay=tmp116,<param>=<val>
+Params: addr                    I2C address of the TMP116 (default: 0x48)
+
+        i2c-bus                 Supports all the standard I2C bus selection
+                                parameters - see "dtoverlay -h i2c-bus"
 
 Name:   tpm-slb9670
 Info:   Enables support for Infineon SLB9670 Trusted Platform Module add-on
