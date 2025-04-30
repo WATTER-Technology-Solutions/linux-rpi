@@ -84,6 +84,9 @@ modules.order
 # Debian directory (make deb-pkg)
 #
 /debian/
+*.deb
+*.buildinfo
+*.changes
 
 #
 # Snap directory (make snap-pkg)
