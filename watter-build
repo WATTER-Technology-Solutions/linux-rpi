@@ -2,7 +2,7 @@
 
 target=$1
 rev=1
-kver="$(make kernelversion)-watter-$rev"
+kver="$(make kernelversion)-watter-$rev-rpi-2712"
 
 function usage()
 {
