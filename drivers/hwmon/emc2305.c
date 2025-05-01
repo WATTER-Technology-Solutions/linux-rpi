@@ -11,6 +11,7 @@
 #include <linux/module.h>
 #include <linux/platform_data/emc2305.h>
 #include <linux/thermal.h>
+#include <linux/pwm.h>
 
 #define EMC2305_REG_FAN_STATUS		0x24
 #define EMC2305_REG_FAN_STALL_STATUS	0x25
@@ -291,26 +292,26 @@ static int emc2305_get_tz_of(struct device *dev)
 	struct device_node *np = dev->of_node;
 	struct emc2305_data *data = dev_get_drvdata(dev);
 	int ret = 0;
-	u8 val;
+	u32 val;
 	int i;
 
 	/* OF parameters are optional - overwrite default setting
 	 * if some of them are provided.
 	 */
 
-	ret = of_property_read_u8(np, "emc2305,cooling-levels", &val);
+	ret = of_property_read_u32(np, "emc2305,cooling-levels", &val);
 	if (!ret)
 		data->max_state = val;
 	else if (ret != -EINVAL)
 		return ret;
 
-	ret = of_property_read_u8(np, "emc2305,pwm-max", &val);
+	ret = of_property_read_u32(np, "emc2305,pwm-max", &val);
 	if (!ret)
 		data->pwm_max = val;
 	else if (ret != -EINVAL)
 		return ret;
 
-	ret = of_property_read_u8(np, "emc2305,pwm-min", &val);
+	ret = of_property_read_u32(np, "emc2305,pwm-min", &val);
 	if (!ret)
 		for (i = 0; i < EMC2305_PWM_MAX; i++)
 			data->pwm_min[i] = val;
@@ -320,10 +321,12 @@ static int emc2305_get_tz_of(struct device *dev)
 	/* Not defined or 0 means one thermal zone over all cooling devices.
 	 * Otherwise - separated thermal zones for each PWM channel.
 	 */
-	ret = of_property_read_u8(np, "emc2305,pwm-channel", &val);
-	if (!ret)
+	ret = of_property_read_u32(np, "emc2305,pwm-channel", &val);
+	if (!ret) {
+		dev_info(dev, "setting pwm_separate to %s\n",
+			 str_true_false(val != 0));
 		data->pwm_separate = (val != 0);
-	else if (ret != -EINVAL)
+	} else if (ret != -EINVAL)
 		return ret;
 
 	return 0;
@@ -380,13 +383,20 @@ static int emc2305_set_tz(struct device *dev)
 	struct emc2305_data *data = dev_get_drvdata(dev);
 	int i, ret;
 
-	if (!data->pwm_separate)
-		return emc2305_set_single_tz(dev, 0);
+	if (!data->pwm_separate) {
+		ret = emc2305_set_single_tz(dev, 0);
+		if (!ret)
+			dev_info(dev, "%s: registered single cooling device\n",
+				 emc2305_fan_name[0]);
+		return ret;
+	}
 
 	for (i = 0; i < data->pwm_num; i++) {
 		ret = emc2305_set_single_tz(dev, i + 1);
 		if (ret)
 			goto thermal_cooling_device_register_fail;
+		dev_info(dev, "%s: registered cooling device\n",
+			 emc2305_fan_name[i + 1]);
 	}
 	return 0;
 
