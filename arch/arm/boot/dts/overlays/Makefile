@@ -305,7 +305,6 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
 	tc358743-audio.dtbo \
 	tc358743-pi5.dtbo \
 	tinylcd35.dtbo \
-	tmp116.dtbo \
 	tpm-slb9670.dtbo \
 	tpm-slb9673.dtbo \
 	uart0.dtbo \
@@ -351,6 +350,7 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
 	w1-gpio-pullup.dtbo \
 	w1-gpio-pullup-pi5.dtbo \
 	w5500.dtbo \
+	watter-apollo.dtbo \
 	watterott-display.dtbo \
 	waveshare-can-fd-hat-mode-a.dtbo \
 	waveshare-can-fd-hat-mode-b.dtbo \
