@@ -1,0 +1,82 @@
+// Definitions for WATTER Apollo RPi Board
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/thermal/thermal.h>
+
+/ {
+	compatible = "brcm,bcm2835";
+
+	fragment@0 {
+		target-path = "i2c3";
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			emc2303: emc2303@4d {
+				compatible = "microchip,emc2303";
+				emc2305,pwm-channel = <1>;
+				reg = <0x4d>;
+				#cooling-cells = <0x02>;
+			};
+		};
+	};
+
+	fragment@1 {
+		target-path = "i2c2";
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			tmp116: tmp116@48 {
+				compatible = "ti,tmp116";
+				reg = <0x48>;
+				#thermal-sensor-cells = <0>;
+
+				status = "okay";
+			};
+		};
+	};
+
+	fragment@2 {
+		target-path = "/thermal-zones";
+		__overlay__ {
+			watter_thermal: watter-thermal {
+				polling-delay-passive = <1000>;
+				polling-delay = <2000>;
+				coefficients = <(-556) 418000>;
+
+				thermal-sensors = <&tmp116>;
+
+				watter_cooling_maps: cooling-maps {
+					watter_map0: watter-map0 {
+						trip = <&watter_fanmid0>;
+						cooling-device = <&emc2303 2 6>;
+					};
+					watter_map1: watter-map1 {
+						trip = <&watter_fanmax0>;
+						cooling-device = <&emc2303 7 THERMAL_NO_LIMIT>;
+					};
+				};
+
+				watter_trips: trips {
+					watter_fanmid0: watter-fanmid0 {
+						temperature = <50000>;
+						hysteresis = <2000>;
+						type = "passive";
+					};
+					watter_fanmax0: watter-fanmax0 {
+						temperature = <75000>;
+						hysteresis = <2000>;
+						type = "passive";
+					};
+				};
+			};
+		};
+	};
+
+	__overrides__ {
+	};
+};
