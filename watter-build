@@ -12,7 +12,7 @@ function usage()
 
 case "$1" in
 apollo)
-	export KDEB_PACKAGEEXT=apollo-${rev}
+	export KDEB_PACKAGEEXT=apollo
 	export KBUILD_IMAGE=arch/arm64/boot/Image.gz
 	;;
 *)
@@ -30,9 +30,9 @@ case "$1" in
 	;;
 esac
 
-cpus=`getconf _NPROCESSORS_ONLN`
-nway=`echo "($cpus * 15) / 10" | bc`
-dir="`pwd`/build-$target"
+cpus=$(getconf _NPROCESSORS_ONLN)
+nway=$(echo "($cpus * 15) / 10" | bc)
+dir=${BUILD_DIR:-$(pwd)/build-${target}}
 
 export HOSTCC=gcc
 export CC=gcc
