@@ -11,7 +11,7 @@
 		target-path = "/";
 
 		__overlay__ {
-			i2c_gpio: i2c@0 {
+			i2c_gpio: i2c@5 {
 				reg = <0xffffffff>;
 				compatible = "i2c-gpio";
 				gpios = <&gpio 23 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN) /* sda */
@@ -27,14 +27,14 @@
 	fragment@1 {
 		target-path = "/aliases";
 		__overlay__ {
-			i2c_gpio = "/i2c@0";
+			i2c_gpio = "/i2c@5";
 		};
 	};
 
 	fragment@2 {
 		target-path = "/__symbols__";
 		__overlay__ {
-			i2c_gpio = "/i2c@0";
+			i2c_gpio = "/i2c@5";
 		};
 	};
 
