@@ -20,6 +20,11 @@
 				reg = <0x4d>;
 				#cooling-cells = <0x02>;
 			};
+
+			flow_3: pcf8593@51 {
+				compatible = "pcf8591";
+				reg = <0x51>;
+			};
 		};
 	};
 
@@ -37,10 +42,53 @@
 
 				status = "okay";
 			};
+
+			flow_2: pcf8593@51 {
+				compatible = "pcf8591";
+				reg = <0x51>;
+			};
 		};
 	};
 
 	fragment@2 {
+		target-path = "i2c1";
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			thermo_1: mcp9600@60 {
+				compatible = "microchip,mcp9600";
+				reg = <0x60>;
+				#thermal-sensor-cells = <0>;
+			};
+
+			thermo_2: mcp9600@61 {
+				compatible = "microchip,mcp9600";
+				reg = <0x61>;
+				#thermal-sensor-cells = <0>;
+			};
+
+			thermo_3: mcp9600@65 {
+				compatible = "microchip,mcp9600";
+				reg = <0x65>;
+				#thermal-sensor-cells = <0>;
+			};
+
+			thermo_4: mcp9600@67 {
+				compatible = "microchip,mcp9600";
+				reg = <0x67>;
+				#thermal-sensor-cells = <0>;
+			};
+
+			flow_1: pcf8593@51 {
+				compatible = "pcf8591";
+				reg = <0x51>;
+			};
+		};
+	};
+
+	fragment@3 {
 		target-path = "/thermal-zones";
 		__overlay__ {
 			watter_thermal: watter-thermal {
