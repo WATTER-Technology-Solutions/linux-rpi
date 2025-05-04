@@ -8,6 +8,20 @@
 	compatible = "brcm,bcm2835";
 
 	fragment@0 {
+		target-path = "/i2c@5";
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			flow_3: pcf8593@51 {
+				compatible = "pcf8591";
+				reg = <0x51>;
+			};
+		};
+	};
+
+	fragment@1 {
 		target-path = "i2c3";
 		__overlay__ {
 			#address-cells = <1>;
@@ -21,14 +35,14 @@
 				#cooling-cells = <0x02>;
 			};
 
-			flow_3: pcf8593@51 {
+			flow_2: pcf8593@51 {
 				compatible = "pcf8591";
 				reg = <0x51>;
 			};
 		};
 	};
 
-	fragment@1 {
+	fragment@2 {
 		target-path = "i2c2";
 		__overlay__ {
 			#address-cells = <1>;
@@ -39,18 +53,11 @@
 				compatible = "ti,tmp116";
 				reg = <0x48>;
 				#thermal-sensor-cells = <0>;
-
-				status = "okay";
-			};
-
-			flow_2: pcf8593@51 {
-				compatible = "pcf8591";
-				reg = <0x51>;
 			};
 		};
 	};
 
-	fragment@2 {
+	fragment@3 {
 		target-path = "i2c1";
 		__overlay__ {
 			#address-cells = <1>;
@@ -88,7 +95,7 @@
 		};
 	};
 
-	fragment@3 {
+	fragment@4 {
 		target-path = "/thermal-zones";
 		__overlay__ {
 			watter_thermal: watter-thermal {
