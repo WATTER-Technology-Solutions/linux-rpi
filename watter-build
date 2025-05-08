@@ -1,7 +1,7 @@
 #!/bin/bash
 
 target=$1
-rev=4.1
+rev=4.2
 kver="$(make kernelversion)-watter-$rev-rpi-2712"
 
 function usage()
@@ -14,6 +14,7 @@ case "$1" in
 apollo)
 	export KDEB_PACKAGEEXT=apollo
 	export KBUILD_IMAGE=arch/arm64/boot/Image.gz
+	export ARCH=arm64
 	;;
 *)
 	usage
@@ -37,7 +38,7 @@ dir=${BUILD_DIR:-$(pwd)/build-${target}}
 export HOSTCC=gcc
 export CC=gcc
 
-export MAKEFLAGS="O=$dir -j$nway KERNELRELEASE=$kver"
+export MAKEFLAGS="O=$dir -j$nway KERNELRELEASE=$kver ARCH=$ARCH"
 
 if ! test -f "$dir/.config"; then
 	test -d "$dir" || mkdir "$dir"
