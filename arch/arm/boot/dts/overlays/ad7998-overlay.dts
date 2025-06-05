@@ -22,6 +22,7 @@
 			ad7998: ad7998@23 {
 				compatible = "ad7998";
 				reg = <0x23>;
+				vcc-supply = <&sd_vcc_reg>;
 
 				status = "okay";
 			};
