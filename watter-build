@@ -37,6 +37,9 @@ dir=${BUILD_DIR:-$(pwd)/build-${target}}
 
 export HOSTCC=gcc
 export CC=gcc
+if [ "$(uname -m)" != "aarch64" ]; then
+    export CROSS_COMPILE=aarch64-linux-gnu-
+fi
 
 export MAKEFLAGS="O=$dir -j$nway KERNELRELEASE=$kver ARCH=$ARCH"
 
