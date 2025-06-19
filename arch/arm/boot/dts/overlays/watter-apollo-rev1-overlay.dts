@@ -2,6 +2,7 @@
 /dts-v1/;
 /plugin/;
 
+#include "i2c-buses.dtsi"
 #include <dt-bindings/thermal/thermal.h>
 
 / {
@@ -131,6 +132,24 @@
 			};
 		};
 	};
+
+	fragment@5 {
+                target-path = "/axi/pcie@1000120000/rp1/i2c@78000/mcp@20";
+                __overlay__ {
+			gpio-line-names =
+				"pc-power-button",
+				"pc-reset",
+				"pc-contactor",
+				"heat-element",
+				"water-pump",
+				"coolant-pump",
+				"flow-reset-1",
+				"flow-reset-2",
+				"flow-reset-3",
+				"conversion-start-thermistor",
+				"conversion-start-ac-monitor";
+		};
+        };
 
 	__overrides__ {
 	};

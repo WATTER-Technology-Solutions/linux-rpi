@@ -38,17 +38,7 @@
 		};
 	};
 
-        fragment@4 {
-		target = <&mcp23017>;
-		mcp23017_names: __overlay__ {
-			gpio-line-names = "pc-power-button", "pc-reset", "pc-contactor",
-				"heat-element", "water-pump", "coolant-pump",
-				"flow-reset-1", "flow-reset-2", "flow-reset-3",
-				"conversion-start-thermistor", "conversion-start-ac-monitor";
-		};
-	};
-
-	fragment@5 {
+	fragment@4 {
 		target = <&i2cbus>;
 		__overlay__ {
 			#address-cells = <1>;
