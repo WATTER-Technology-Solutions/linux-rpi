@@ -1029,6 +1029,17 @@ static int w1_therm_add_slave(struct w1_slave *sl)
 		}
 	}
 
+	if (sl->master->bus_master->dev_id)
+		snprintf(sl->name, sizeof(sl->name),
+			 "%s-%02x-%012llx",
+			 sl->master->bus_master->dev_id, sl->reg_num.family,
+			 (unsigned long long)sl->reg_num.id);
+	else
+		snprintf(sl->name, sizeof(sl->name),
+			 "%02x-%012llx",
+			 sl->reg_num.family,
+			 (unsigned long long)sl->reg_num.id);
+
 	/* Finally initialize convert_triggered flag */
 	SLAVE_CONVERT_TRIGGERED(sl) = 0;
 

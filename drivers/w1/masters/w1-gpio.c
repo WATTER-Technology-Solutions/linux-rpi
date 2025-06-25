@@ -21,6 +21,7 @@ struct w1_gpio_ddata {
 	struct gpio_desc *gpiod;
 	struct gpio_desc *pullup_gpiod;
 	unsigned int pullup_duration;
+	char dev_id[64];
 };
 
 static u8 w1_gpio_set_pullup(void *data, int delay)
@@ -101,6 +102,9 @@ static int w1_gpio_probe(struct platform_device *pdev)
 	if (IS_ERR(ddata->pullup_gpiod))
 		return dev_err_probe(dev, PTR_ERR(ddata->pullup_gpiod),
 				     "gpio_request (ext_pullup_enable_pin) failed\n");
+
+	strscpy(ddata->dev_id, dev_name(dev), sizeof(ddata->dev_id));
+	master->dev_id = ddata->dev_id;
 
 	master->data = ddata;
 	master->read_bit = w1_gpio_read_bit;
