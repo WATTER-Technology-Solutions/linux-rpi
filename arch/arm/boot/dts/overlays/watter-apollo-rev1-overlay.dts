@@ -147,7 +147,10 @@
 				"flow-reset-2",
 				"flow-reset-3",
 				"conversion-start-thermistor",
-				"conversion-start-ac-monitor";
+				"conversion-start-ac-monitor",
+				"valve-opened",
+				"valve-closed",
+				"valve-actuate";
 		};
         };
 

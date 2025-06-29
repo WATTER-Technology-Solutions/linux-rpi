@@ -2423,7 +2423,7 @@ CONFIG_GPIO_MOCKUP=m
 # CONFIG_GPIO_VIRTUSER is not set
 # end of GPIO Debugging utilities
 
-CONFIG_W1=y
+CONFIG_W1=m
 CONFIG_W1_CON=y
 
 #
