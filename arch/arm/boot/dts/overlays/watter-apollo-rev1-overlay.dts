@@ -16,8 +16,9 @@
 			status = "okay";
 
 			flow_3: pcf8593@51 {
-				compatible = "pcf8591";
+				compatible = "pcf8593";
 				reg = <0x51>;
+				status = "disabled";
 			};
 		};
 	};
@@ -37,8 +38,9 @@
 			};
 
 			flow_2: pcf8593@51 {
-				compatible = "pcf8591";
+				compatible = "pcf8593";
 				reg = <0x51>;
+				status = "disabled";
 			};
 		};
 	};
@@ -90,8 +92,9 @@
 			};
 
 			flow_1: pcf8593@51 {
-				compatible = "pcf8591";
+				compatible = "pcf8593";
 				reg = <0x51>;
+				status = "disabled";
 			};
 		};
 	};
@@ -138,7 +141,7 @@
                 __overlay__ {
 			gpio-line-names =
 				"pc-power-button",
-				"pc-reset",
+				"valve-actuate",
 				"pc-contactor",
 				"heat-element",
 				"water-pump",
@@ -149,8 +152,7 @@
 				"conversion-start-thermistor",
 				"conversion-start-ac-monitor",
 				"valve-opened",
-				"valve-closed",
-				"valve-actuate";
+				"valve-closed";
 		};
         };
 
