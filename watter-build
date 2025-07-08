@@ -1,7 +1,7 @@
 #!/bin/bash
 
 target=$1
-rev=6.0
+rev=6.1
 kver="$(make kernelversion)-watter-$rev-rpi-2712"
 
 function usage()
