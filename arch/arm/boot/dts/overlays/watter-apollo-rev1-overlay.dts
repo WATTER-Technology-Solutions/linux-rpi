@@ -94,7 +94,10 @@
 			flow_1: pcf8593@51 {
 				compatible = "pcf8593";
 				reg = <0x51>;
-				status = "disabled";
+				gpm-min = "0.26";
+				gpm-max = "16";
+				ppg = "450";
+				label = "hotwater";
 			};
 		};
 	};
