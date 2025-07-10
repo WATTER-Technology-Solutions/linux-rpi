@@ -16,7 +16,7 @@
 			status = "okay";
 
 			flow_3: pcf8593@51 {
-				compatible = "pcf8593";
+				compatible = "pcf8593-ctr";
 				reg = <0x51>;
 				status = "disabled";
 			};
@@ -38,7 +38,7 @@
 			};
 
 			flow_2: pcf8593@51 {
-				compatible = "pcf8593";
+				compatible = "pcf8593-ctr";
 				reg = <0x51>;
 				status = "disabled";
 			};
@@ -92,11 +92,12 @@
 			};
 
 			flow_1: pcf8593@51 {
-				compatible = "pcf8593";
+				compatible = "pcf8593-ctr";
 				reg = <0x51>;
-				gpm-min = "0.26";
-				gpm-max = "16";
-				ppg = "450";
+				/* The units are <INT MICRO> */
+				unit-min = <0 260000>;
+				unit-max = <16 0>;
+				unit-scale = <450 0>;
 				label = "hotwater";
 			};
 		};

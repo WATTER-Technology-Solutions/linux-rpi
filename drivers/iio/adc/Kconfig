@@ -1134,6 +1134,18 @@ config PALMAS_GPADC
 	  is used in smartphones and tablets and supports a 16 channel
 	  general purpose ADC.
 
+
+config PCF8593_CTR
+	tristate "PCF8593 RTC Chip in Countet Mode"
+	depends on I2C
+	help
+	  This driver is meant for pcf8593 chips attached to a pulse source
+	  on OSCI instead of an crystal. Common uses are flow meters that
+	  produce pulses or any other pulse source.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called pcf8593-ctr.
+
 config QCOM_VADC_COMMON
 	tristate
 
