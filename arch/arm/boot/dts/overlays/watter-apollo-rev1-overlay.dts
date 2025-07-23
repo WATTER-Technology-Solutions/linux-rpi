@@ -94,10 +94,8 @@
 			flow_1: pcf8593@51 {
 				compatible = "pcf8593-ctr";
 				reg = <0x51>;
-				/* The units are <INT MICRO> */
-				unit-min = <0 260000>;
-				unit-max = <16 0>;
-				unit-scale = <450 0>;
+				/* <INT MICRO> */
+				scale = <450 0>;
 				label = "hotwater";
 			};
 		};

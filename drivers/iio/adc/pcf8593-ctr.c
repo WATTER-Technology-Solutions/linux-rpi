@@ -21,11 +21,7 @@
 
 struct pcf8593 {
 	struct i2c_client *client;
-	unsigned long last_read;
-	int last_count;
-	unsigned int unit, unit_micro;
-	unsigned int unit_max, unit_max_micro;
-	unsigned int unit_min, unit_min_micro;
+	unsigned int scale, scale_micro;
 };
 
 #define CTRL_STOP	0xa0
@@ -34,11 +30,13 @@ struct pcf8593 {
 #define REG_CONTROL	0x00
 #define REG_COUNTER	0x01
 
+/* Max counter is 6 digits of BCD */
+#define MAX_COUNTER	999999
+
 static const struct iio_chan_spec pcf8593_trigger_channel = {
 	.type = IIO_COUNT,
 	.channel = 0,
 	.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
-			      BIT(IIO_CHAN_INFO_AVERAGE_RAW) |
 			      BIT(IIO_CHAN_INFO_PEAK) |
 			      BIT(IIO_CHAN_INFO_SCALE),
 	.indexed = 1
@@ -64,42 +62,17 @@ static int pcf8593_counter_read_raw(struct iio_dev *indio_dev,
 			return count;
 
 		*val = count;
+
 		return IIO_VAL_INT;
 
-	case IIO_CHAN_INFO_AVERAGE_RAW:
-		/* Provide as a rate of pulses-per-minute since
-		 * last read. */
-		count = pcf8593_get_counter(pcf8593->client);
-		if (count < 0)
-			return -EIO;
-
-		/* Calculate jiffies delta */
-		last_read = pcf8593->last_read;
-		pcf8593->last_read = jiffies;
-		delta = pcf8593->last_read - last_read;
-		msec = jiffies_delta_to_msecs(delta);
-
-		/* Calculate count delta */
-		last_count = pcf8593->last_count;
-		pcf8593->last_count = count;
-		count -= last_count;
-
-		/* Convert to pulses per sec */
-		count *= 1000000000UL * 60;
-		count /= msec;
-		*val = count / 1000000;
-		*val2 = count % 1000000;
-
-		return IIO_VAL_INT_PLUS_MICRO;
-
 	case IIO_CHAN_INFO_PEAK:
-		*val = 999999;
+		*val = MAX_COUNTER;
 
 		return IIO_VAL_INT;
 
 	case IIO_CHAN_INFO_SCALE:
-		*val = pcf8593->unit;
-		*val2 = pcf8593->unit_micro;
+		*val = pcf8593->scale;
+		*val2 = pcf8593->scale_micro;
 
 		return IIO_VAL_INT_PLUS_MICRO;
         }
@@ -201,30 +174,17 @@ static int pcf8593_reset_counter(struct i2c_client *client)
 	buf[1] = CTRL_START;
 	ret = i2c_master_send(client, (char *)buf, 2);
 
-	pcf8593->last_read = jiffies;
-	pcf8593->last_count = 0;
-
 	return ret == 2 ? 0 : -EIO;
 }
 
-static void pcf8593_probe_units(struct pcf8593 *pcf8593)
+static void pcf8593_probe_scale(struct pcf8593 *pcf8593)
 {
 	struct device_node *np = dev_of_node(&pcf8593->client->dev);
 
-	of_property_read_u32_index(np, "unit-scale", 0,
-				   &pcf8593->unit);
-	of_property_read_u32_index(np, "unit-scale", 1,
-				   &pcf8593->unit_micro);
-
-	of_property_read_u32_index(np, "unit-min", 0,
-				   &pcf8593->unit_min);
-	of_property_read_u32_index(np, "unit-min", 1,
-				   &pcf8593->unit_min_micro);
-
-	of_property_read_u32_index(np, "unit-max", 0,
-				   &pcf8593->unit_max);
-	of_property_read_u32_index(np, "unit-max", 1,
-				   &pcf8593->unit_max_micro);
+	of_property_read_u32_index(np, "scale", 0,
+				   &pcf8593->scale);
+	of_property_read_u32_index(np, "scale", 1,
+				   &pcf8593->scale_micro);
 }
 
 static int pcf8593_probe(struct i2c_client *client)
@@ -241,7 +201,7 @@ static int pcf8593_probe(struct i2c_client *client)
 
 	pcf8593->client = client;
 
-	pcf8593_probe_units(pcf8593);
+	pcf8593_probe_scale(pcf8593);
 
 	i2c_set_clientdata(client, pcf8593);
 
