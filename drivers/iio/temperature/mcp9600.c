@@ -27,6 +27,8 @@
 #define MCP9600_COLD_JUNCTION 0x2
 #define MCP9600_STATUS			0x4
 #define MCP9600_STATUS_ALERT(x)		BIT(x)
+#define MCP9600_STATUS_OC_IR		BIT(4)
+#define MCP9601_STATUS_SC		BIT(5)
 #define MCP9600_ALERT_CFG1		0x8
 #define MCP9600_ALERT_CFG(x)		(MCP9600_ALERT_CFG1 + (x - 1))
 #define MCP9600_ALERT_CFG_ENABLE	BIT(0)
@@ -42,6 +44,7 @@
 
 /* MCP9600 device id value */
 #define MCP9600_DEVICE_ID_MCP9600 0x40
+#define MCP9600_DEVICE_ID_MCP9601 0x41
 
 #define MCP9600_ALERT_COUNT		4
 
@@ -88,6 +91,7 @@ static const struct iio_event_spec mcp9600_events[] = {
 			.type = IIO_TEMP,				       \
 			.address = MCP9600_HOT_JUNCTION,		       \
 			.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |	       \
+					      BIT(IIO_CHAN_INFO_STATUS) |      \
 					      BIT(IIO_CHAN_INFO_SCALE),	       \
 			.event_spec = &mcp9600_events[hj_ev_spec_off],	       \
 			.num_event_specs = hj_num_ev,			       \
@@ -125,6 +129,7 @@ static const struct iio_chan_spec mcp9600_channels[][2] = {
 
 struct mcp9600_data {
 	struct i2c_client *client;
+	unsigned char dev_id;
 };
 
 static int mcp9600_read(struct mcp9600_data *data,
@@ -150,6 +155,34 @@ static int mcp9600_read_raw(struct iio_dev *indio_dev,
 	int ret;
 
 	switch (mask) {
+	case IIO_CHAN_INFO_STATUS:
+		/*
+		 * 9600 actually supports "Input Range" but it's not useful
+		 * unless specifically wired to do so.
+		 *
+		 * 9601 supports Open-Circuit and Short-Circuit detection, if
+		 * wired to do so.
+		 *
+		 * There's no way to tell if the chip is connected for these
+		 * to work. Maybe we'll add dt properties to enable or disable
+		 * the detection here.
+		 */
+		ret = i2c_smbus_read_byte_data(data->client, MCP9600_STATUS);
+		if (ret < 0)
+			return ret;
+
+		if (ret & MCP9600_STATUS_OC_IR)
+			/* Open-Circuit / Input-Range */
+			*val = 'R';
+		else if ((data->dev_id == MCP9600_DEVICE_ID_MCP9601) && (ret & MCP9601_STATUS_SC))
+			/* Short- Circuit, 9601 only */
+			*val = 'S';
+		else
+			/* "OK" */
+			*val = 'O';
+
+		return IIO_VAL_CHAR;
+
 	case IIO_CHAN_INFO_RAW:
 		ret = mcp9600_read(data, chan, val);
 		if (ret)
@@ -418,20 +451,32 @@ static int mcp9600_probe(struct i2c_client *client)
 {
 	struct iio_dev *indio_dev;
 	struct mcp9600_data *data;
-	int ret, ch_sel;
+	int ch_sel, dev_id;
 
-	ret = i2c_smbus_read_byte_data(client, MCP9600_DEVICE_ID);
-	if (ret < 0)
-		return dev_err_probe(&client->dev, ret, "Failed to read device ID\n");
-	if (ret != MCP9600_DEVICE_ID_MCP9600)
-		dev_warn(&client->dev, "Expected ID %x, got %x\n",
-				MCP9600_DEVICE_ID_MCP9600, ret);
+	dev_id = i2c_smbus_read_byte_data(client, MCP9600_DEVICE_ID);
+	if (dev_id < 0)
+		return dev_err_probe(&client->dev, dev_id, "Failed to read device ID\n");
+
+	switch (dev_id) {
+	case MCP9600_DEVICE_ID_MCP9600:
+		dev_info(&client->dev, "Identified as mcp9600");
+		break;
+	case MCP9600_DEVICE_ID_MCP9601:
+		dev_info(&client->dev, "Identified as mcp9601");
+		break;
+
+	default:
+		return dev_err_probe(&client->dev, -EINVAL, "Unknown device ID: %x\n",
+				     dev_id);
+	}
 
 	indio_dev = devm_iio_device_alloc(&client->dev, sizeof(*data));
 	if (!indio_dev)
 		return -ENOMEM;
 
 	data = iio_priv(indio_dev);
+
+	data->dev_id = dev_id;
 	data->client = client;
 
 	ch_sel = mcp9600_probe_alerts(indio_dev);
