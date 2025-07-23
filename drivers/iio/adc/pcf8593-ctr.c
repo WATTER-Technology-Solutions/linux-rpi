@@ -50,9 +50,7 @@ static int pcf8593_counter_read_raw(struct iio_dev *indio_dev,
 				    int *val, int *val2, long mask)
 {
         struct pcf8593 *pcf8593 = iio_priv(indio_dev);
-        int last_count;
-	long delta;
-	unsigned long msec, last_read, count;
+        int count;
 
         switch (mask) {
         case IIO_CHAN_INFO_RAW:
@@ -156,7 +154,6 @@ static int pcf8593_get_counter(struct i2c_client *client)
 
 static int pcf8593_reset_counter(struct i2c_client *client)
 {
-	struct pcf8593 *pcf8593 = i2c_get_clientdata(client);
 	unsigned char buf[5];
 	int ret;
 
