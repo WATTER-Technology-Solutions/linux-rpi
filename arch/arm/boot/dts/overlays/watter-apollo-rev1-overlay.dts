@@ -56,7 +56,7 @@
 			tmp116: tmp116@48 {
 				compatible = "ti,tmp116";
 				reg = <0x48>;
-				#thermal-sensor-cells = <0>;
+				label = "ambient";
 			};
 		};
 	};
