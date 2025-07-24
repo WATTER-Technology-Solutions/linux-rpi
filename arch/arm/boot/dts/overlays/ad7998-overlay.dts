@@ -23,13 +23,14 @@
 				compatible = "ad7998";
 				reg = <0x23>;
 				vcc-supply = <&sd_vcc_reg>;
-
+				label = "UNKNOWN";
 				status = "okay";
 			};
 		};
 	};
 
 	__overrides__ {
-		addr = <&ad7998>,"reg:0";
+		label = <&ad7998>,"label";
+		addr  = <&ad7998>,"reg:0";
 	};
 };

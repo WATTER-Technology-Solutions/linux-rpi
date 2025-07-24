@@ -504,9 +504,9 @@ Name:   ad7998
 Info:   Configures the AD7998 ADC
 Load:   dtoverlay=ad7998,<param>=<val>
 Params: addr                    I2C address of the AD7998 (default: 0x23)
-
         i2c-bus                 Supports all the standard I2C bus selection
                                 parameters - see "dtoverlay -h i2c-bus"
+        label                   Set a label for the key
 
 Name:   adafruit-st7735r
 Info:   Overlay for the SPI-connected Adafruit 1.8" 160x128 or 128x128 displays,
