@@ -31,8 +31,10 @@
 #define MCP9600_STATUS_OC_IR		BIT(4)
 #define MCP9601_STATUS_SC		BIT(5)
 #define MCP9600_SENSOR_CFG		0x5
-#define MCP9600_SENSOR_TYPE_MASK	GENMASK(7, 4)
-#define MCP9600_SENSOR_TYPE(x)		((x << 4) & 0xff)
+#define MCP9600_SENSOR_TYPE_MASK	GENMASK(6, 4)
+#define MCP9600_SENSOR_TYPE(x)		((x << 4) & MCP9600_SENSOR_TYPE_MASK)
+#define MCP9600_FILTER_MASK		GENMASK(2, 0)
+#define MCP9600_FILTER(x)		((x << 0) & MCP9600_FILTER_MASK)
 #define MCP9600_ALERT_CFG1		0x8
 #define MCP9600_ALERT_CFG(x)		(MCP9600_ALERT_CFG1 + (x - 1))
 #define MCP9600_ALERT_CFG_ENABLE	BIT(0)
@@ -112,7 +114,8 @@ static const struct iio_event_spec mcp9600_events[] = {
 			.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |	       \
 					      BIT(IIO_CHAN_INFO_STATUS) |      \
 					      BIT(IIO_CHAN_INFO_THERMOCOUPLE_TYPE) | \
-					      BIT(IIO_CHAN_INFO_SCALE),	       \
+					      BIT(IIO_CHAN_INFO_SCALE) |       \
+					      BIT(IIO_CHAN_INFO_FILTER),       \
 			.event_spec = &mcp9600_events[hj_ev_spec_off],	       \
 			.num_event_specs = hj_num_ev,			       \
 		},							       \
@@ -151,6 +154,7 @@ struct mcp9600_data {
 	struct i2c_client *client;
 	unsigned char dev_id;
 	u32 thermocouple_type;
+	u8 filter;
 };
 
 static int mcp9600_read(struct mcp9600_data *data,
@@ -205,10 +209,15 @@ static int mcp9600_read_raw(struct iio_dev *indio_dev,
 		if (ret)
 			return ret;
 		return IIO_VAL_INT;
+
 	case IIO_CHAN_INFO_SCALE:
 		*val = 62;
 		*val2 = 500000;
 		return IIO_VAL_INT_PLUS_MICRO;
+
+	case IIO_CHAN_INFO_FILTER:
+		*val = data->filter;
+		return IIO_VAL_INT;
 
 	case IIO_CHAN_INFO_THERMOCOUPLE_TYPE:
 		*val = mcp9600_tc_types[data->thermocouple_type];
@@ -237,18 +246,12 @@ static int mcp9600_write_raw_get_fmt(struct iio_dev *indio_dev,
 static int mcp9600_init(struct mcp9600_data *data)
 {
 	struct i2c_client *client = data->client;
-	int ret;
+	int ret, cfg;
 
-	ret = i2c_smbus_read_byte_data(client, MCP9600_SENSOR_CFG);
-	if (ret < 0) {
-		dev_err(&client->dev, "Could not read sensor config\n");
-		return ret;
-	}
+	cfg  = MCP9600_SENSOR_TYPE(mcp9600_type_map[data->thermocouple_type]) |
+		MCP9600_FILTER(data->filter);
 
-	ret &= ~MCP9600_SENSOR_TYPE_MASK;
-	ret |= MCP9600_SENSOR_TYPE(mcp9600_type_map[data->thermocouple_type]);
-
-	ret = i2c_smbus_write_byte_data(client, MCP9600_SENSOR_CFG, ret);
+	ret = i2c_smbus_write_byte_data(client, MCP9600_SENSOR_CFG, cfg);
 
 	if (ret < 0)
 		dev_err(&client->dev, "Failed to set sensor configuration\n");
@@ -281,6 +284,14 @@ static int mcp9600_write_raw(struct iio_dev *indio_dev,
 		mcp9600_init(data);
 		break;
         }
+
+	case IIO_CHAN_INFO_FILTER:
+		if (val > 0x7 || val < 0)
+			return -EINVAL;
+		data->filter = val;
+		mcp9600_init(data);
+		break;
+
         default:
                 return -EINVAL;
 	}

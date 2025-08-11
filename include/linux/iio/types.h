@@ -70,6 +70,7 @@ enum iio_chan_info_enum {
 	IIO_CHAN_INFO_ZEROPOINT,
 	IIO_CHAN_INFO_TROUGH,
 	IIO_CHAN_INFO_STATUS,
+	IIO_CHAN_INFO_FILTER
 };
 
 #endif /* _IIO_TYPES_H_ */
