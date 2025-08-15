@@ -70,28 +70,28 @@
 			status = "okay";
 
 			thermo_1: mcp9600@60 {
-				compatible = "microchip,mcp9600";
+				compatible = "microchip,mcp9601";
 				reg = <0x60>;
 				thermocouple-type = <THERMOCOUPLE_TYPE_K>;
 				label = "shroud-ambient";
 			};
 
 			thermo_2: mcp9600@61 {
-				compatible = "microchip,mcp9600";
+				compatible = "microchip,mcp9601";
 				reg = <0x61>;
 				thermocouple-type = <THERMOCOUPLE_TYPE_K>;
 				label = "water-loop";
 			};
 
 			thermo_3: mcp9600@65 {
-				compatible = "microchip,mcp9600";
+				compatible = "microchip,mcp9601";
 				reg = <0x65>;
 				thermocouple-type = <THERMOCOUPLE_TYPE_K>;
 				label = "UNUSED";
 			};
 
 			thermo_4: mcp9600@67 {
-				compatible = "microchip,mcp9600";
+				compatible = "microchip,mcp9601";
 				reg = <0x67>;
 				thermocouple-type = <THERMOCOUPLE_TYPE_K>;
 				label = "coolant";

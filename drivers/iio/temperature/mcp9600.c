@@ -18,30 +18,27 @@
 #include <linux/minmax.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
-#include <dt-bindings/iio/temperature/thermocouple.h>
 
 #include <linux/iio/events.h>
 #include <linux/iio/iio.h>
 
+#include <dt-bindings/iio/temperature/thermocouple.h>
+
 /* MCP9600 registers */
-#define MCP9600_HOT_JUNCTION		0x0
-#define MCP9600_COLD_JUNCTION		0x2
-#define MCP9600_STATUS			0x4
+#define MCP9600_HOT_JUNCTION		0x00
+#define MCP9600_COLD_JUNCTION		0x02
+#define MCP9600_STATUS			0x04
 #define MCP9600_STATUS_ALERT(x)		BIT(x)
-#define MCP9600_STATUS_OC_IR		BIT(4)
-#define MCP9601_STATUS_SC		BIT(5)
-#define MCP9600_SENSOR_CFG		0x5
+#define MCP9600_SENSOR_CFG		0x05
 #define MCP9600_SENSOR_TYPE_MASK	GENMASK(6, 4)
-#define MCP9600_SENSOR_TYPE(x)		((x << 4) & MCP9600_SENSOR_TYPE_MASK)
 #define MCP9600_FILTER_MASK		GENMASK(2, 0)
-#define MCP9600_FILTER(x)		((x << 0) & MCP9600_FILTER_MASK)
-#define MCP9600_ALERT_CFG1		0x8
+#define MCP9600_ALERT_CFG1		0x08
 #define MCP9600_ALERT_CFG(x)		(MCP9600_ALERT_CFG1 + (x - 1))
 #define MCP9600_ALERT_CFG_ENABLE	BIT(0)
 #define MCP9600_ALERT_CFG_ACTIVE_HIGH	BIT(2)
 #define MCP9600_ALERT_CFG_FALLING	BIT(3)
 #define MCP9600_ALERT_CFG_COLD_JUNCTION	BIT(4)
-#define MCP9600_ALERT_HYSTERESIS1	0xc
+#define MCP9600_ALERT_HYSTERESIS1	0x0c
 #define MCP9600_ALERT_HYSTERESIS(x)	(MCP9600_ALERT_HYSTERESIS1 + (x - 1))
 #define MCP9600_ALERT_LIMIT1		0x10
 #define MCP9600_ALERT_LIMIT(x)		(MCP9600_ALERT_LIMIT1 + (x - 1))
@@ -67,6 +64,14 @@ enum mcp9600_alert {
 	MCP9600_ALERT4
 };
 
+static const char * const mcp9600_alert_name[MCP9600_ALERT_COUNT] = {
+	[MCP9600_ALERT1] = "alert1",
+	[MCP9600_ALERT2] = "alert2",
+	[MCP9600_ALERT3] = "alert3",
+	[MCP9600_ALERT4] = "alert4",
+};
+
+/* Map between dt-bindings enum and the chip's type value */
 static const unsigned int mcp9600_type_map[] = {
 	[THERMOCOUPLE_TYPE_K] = 0,
 	[THERMOCOUPLE_TYPE_J] = 1,
@@ -78,15 +83,20 @@ static const unsigned int mcp9600_type_map[] = {
 	[THERMOCOUPLE_TYPE_R] = 7,
 };
 
-static const char mcp9600_tc_types[] = {
-        'B', 'E', 'J', 'K', 'N', 'R', 'S', 'T'
+/* Map thermocouple type to a char for for iio info in sysfs */
+static const int iio_tc_types[] = {
+	[THERMOCOUPLE_TYPE_K] = 'K',
+	[THERMOCOUPLE_TYPE_J] = 'J',
+	[THERMOCOUPLE_TYPE_T] = 'T',
+	[THERMOCOUPLE_TYPE_N] = 'N',
+	[THERMOCOUPLE_TYPE_S] = 'S',
+	[THERMOCOUPLE_TYPE_E] = 'E',
+	[THERMOCOUPLE_TYPE_B] = 'B',
+	[THERMOCOUPLE_TYPE_R] = 'R',
 };
 
-static const char * const mcp9600_alert_name[MCP9600_ALERT_COUNT] = {
-	[MCP9600_ALERT1] = "alert1",
-	[MCP9600_ALERT2] = "alert2",
-	[MCP9600_ALERT3] = "alert3",
-	[MCP9600_ALERT4] = "alert4",
+static const int mcp_iir_coefficients_avail[] = {
+	1, 2, 4, 8, 16, 32, 64, 128,
 };
 
 static const struct iio_event_spec mcp9600_events[] = {
@@ -112,10 +122,11 @@ static const struct iio_event_spec mcp9600_events[] = {
 			.type = IIO_TEMP,				       \
 			.address = MCP9600_HOT_JUNCTION,		       \
 			.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |	       \
-					      BIT(IIO_CHAN_INFO_STATUS) |      \
 					      BIT(IIO_CHAN_INFO_THERMOCOUPLE_TYPE) | \
-					      BIT(IIO_CHAN_INFO_SCALE) |       \
-					      BIT(IIO_CHAN_INFO_FILTER),       \
+					      BIT(IIO_CHAN_INFO_LOW_PASS_FILTER_3DB_FREQUENCY) |  \
+					      BIT(IIO_CHAN_INFO_SCALE),	       \
+			.info_mask_separate_available =                        \
+					      BIT(IIO_CHAN_INFO_LOW_PASS_FILTER_3DB_FREQUENCY), \
 			.event_spec = &mcp9600_events[hj_ev_spec_off],	       \
 			.num_event_specs = hj_num_ev,			       \
 		},							       \
@@ -150,11 +161,15 @@ static const struct iio_chan_spec mcp9600_channels[][2] = {
 	MCP9600_CHANNELS(2, 0, 2, 0), /* Alerts: 1 2 3 4 */
 };
 
+struct mcp_chip_info {
+	u8 chip_id;
+	const char *chip_name;
+};
+
 struct mcp9600_data {
 	struct i2c_client *client;
-	unsigned char dev_id;
 	u32 thermocouple_type;
-	u8 filter;
+	u8 filter_level; /* Chip default is 0 */
 };
 
 static int mcp9600_read(struct mcp9600_data *data,
@@ -180,30 +195,6 @@ static int mcp9600_read_raw(struct iio_dev *indio_dev,
 	int ret;
 
 	switch (mask) {
-	case IIO_CHAN_INFO_STATUS:
-		/*
-		 * 9600 supports Input-Range.
-		 *
-		 * 9601 supports Open-Circuit and Short-Circuit.
-		 *
-		 * There's no way to tell if the chip is wired up for these
-		 * to work. Maybe we'll add a dt property to enable or disable
-		 * the detection here.
-		 */
-		ret = i2c_smbus_read_byte_data(data->client, MCP9600_STATUS);
-		if (ret < 0)
-			return ret;
-
-		if (ret & MCP9600_STATUS_OC_IR)
-			*val = 'R';
-		else if ((data->dev_id == MCP9600_DEVICE_ID_MCP9601) && (ret & MCP9601_STATUS_SC))
-			*val = 'S';
-		else
-			/* "OK" */
-			*val = 'O';
-
-		return IIO_VAL_CHAR;
-
 	case IIO_CHAN_INFO_RAW:
 		ret = mcp9600_read(data, chan, val);
 		if (ret)
@@ -215,17 +206,52 @@ static int mcp9600_read_raw(struct iio_dev *indio_dev,
 		*val2 = 500000;
 		return IIO_VAL_INT_PLUS_MICRO;
 
-	case IIO_CHAN_INFO_FILTER:
-		*val = data->filter;
-		return IIO_VAL_INT;
-
 	case IIO_CHAN_INFO_THERMOCOUPLE_TYPE:
-		*val = mcp9600_tc_types[data->thermocouple_type];
+		*val = iio_tc_types[data->thermocouple_type];
 		return IIO_VAL_CHAR;
+
+	case IIO_CHAN_INFO_LOW_PASS_FILTER_3DB_FREQUENCY:
+		*val = mcp_iir_coefficients_avail[data->filter_level];
+		return IIO_VAL_INT;
 
 	default:
 		return -EINVAL;
 	}
+}
+
+static int mcp9600_read_avail(struct iio_dev *indio_dev,
+			      struct iio_chan_spec const *chan,
+			      const int **vals, int *type, int *length,
+			      long mask)
+{
+	switch (mask) {
+	case IIO_CHAN_INFO_LOW_PASS_FILTER_3DB_FREQUENCY:
+		*vals = mcp_iir_coefficients_avail;
+		*type = IIO_VAL_INT;
+		*length = ARRAY_SIZE(mcp_iir_coefficients_avail);
+		return IIO_AVAIL_LIST;
+	default:
+		return -EINVAL;
+	}
+}
+
+static int mcp9600_config(struct mcp9600_data *data)
+{
+	struct i2c_client *client = data->client;
+	int ret;
+	u8 cfg;
+
+	cfg  = FIELD_PREP(MCP9600_SENSOR_TYPE_MASK,
+			  mcp9600_type_map[data->thermocouple_type]) |
+		FIELD_PREP(MCP9600_FILTER_MASK, data->filter_level);
+
+	ret = i2c_smbus_write_byte_data(client, MCP9600_SENSOR_CFG, cfg);
+	if (ret < 0) {
+		dev_err(&client->dev, "Failed to set sensor configuration\n");
+		return ret;
+	}
+
+	return 0;
 }
 
 static int mcp9600_write_raw_get_fmt(struct iio_dev *indio_dev,
@@ -233,70 +259,39 @@ static int mcp9600_write_raw_get_fmt(struct iio_dev *indio_dev,
 				     long mask)
 {
 	switch (mask) {
-	case IIO_CHAN_INFO_STATUS:
-	case IIO_CHAN_INFO_THERMOCOUPLE_TYPE:
-		return IIO_VAL_CHAR;
-	case IIO_CHAN_INFO_SCALE:
+	case IIO_CHAN_INFO_LOW_PASS_FILTER_3DB_FREQUENCY:
 		return IIO_VAL_INT_PLUS_MICRO;
 	default:
-		return IIO_VAL_INT;
+		return -EINVAL;
 	}
-}
-
-static int mcp9600_init(struct mcp9600_data *data)
-{
-	struct i2c_client *client = data->client;
-	int ret, cfg;
-
-	cfg  = MCP9600_SENSOR_TYPE(mcp9600_type_map[data->thermocouple_type]) |
-		MCP9600_FILTER(data->filter);
-
-	ret = i2c_smbus_write_byte_data(client, MCP9600_SENSOR_CFG, cfg);
-
-	if (ret < 0)
-		dev_err(&client->dev, "Failed to set sensor configuration\n");
-
-	return ret;
 }
 
 static int mcp9600_write_raw(struct iio_dev *indio_dev,
 			     struct iio_chan_spec const *chan,
 			     int val, int val2, long mask)
 {
-        struct mcp9600_data *data = iio_priv(indio_dev);
+	struct mcp9600_data *data = iio_priv(indio_dev);
+	int i;
 
-        switch (mask) {
-	case IIO_CHAN_INFO_THERMOCOUPLE_TYPE:
-	{
-		int tc_type = -1;
-		int i;
+	switch (mask) {
+	case IIO_CHAN_INFO_LOW_PASS_FILTER_3DB_FREQUENCY:
+		if (val < 0 || val2 < 0)
+			return -EINVAL;
 
-		for (i = 0; i < ARRAY_SIZE(mcp9600_tc_types); i++) {
-			if (mcp9600_tc_types[i] == toupper(val)) {
-				tc_type = i;
+		for (i = 0; i < ARRAY_SIZE(mcp_iir_coefficients_avail); i++) {
+			if (mcp_iir_coefficients_avail[i] == val)
 				break;
-			}
 		}
-		if (tc_type < 0)
+
+		if (i == ARRAY_SIZE(mcp_iir_coefficients_avail))
 			return -EINVAL;
 
-		data->thermocouple_type = tc_type;
-		mcp9600_init(data);
-		break;
-        }
+		data->filter_level = i;
+		return mcp9600_config(data);
 
-	case IIO_CHAN_INFO_FILTER:
-		if (val > 0x7 || val < 0)
-			return -EINVAL;
-		data->filter = val;
-		mcp9600_init(data);
-		break;
-
-        default:
-                return -EINVAL;
+	default:
+		return -EINVAL;
 	}
-
-	return 0;
 }
 
 static int mcp9600_get_alert_index(int channel2, enum iio_event_direction dir)
@@ -436,6 +431,7 @@ static int mcp9600_write_thresh(struct iio_dev *indio_dev,
 
 static const struct iio_info mcp9600_info = {
 	.read_raw = mcp9600_read_raw,
+	.read_avail = mcp9600_read_avail,
 	.write_raw = mcp9600_write_raw,
 	.write_raw_get_fmt = mcp9600_write_raw_get_fmt,
 	.read_event_config = mcp9600_read_event_config,
@@ -553,25 +549,29 @@ static int mcp9600_probe_alerts(struct iio_dev *indio_dev)
 
 static int mcp9600_probe(struct i2c_client *client)
 {
+	const struct mcp_chip_info *chip_info = i2c_get_match_data(client);
 	struct iio_dev *indio_dev;
 	struct mcp9600_data *data;
 	int ch_sel, dev_id, ret;
 
 	dev_id = i2c_smbus_read_byte_data(client, MCP9600_DEVICE_ID);
 	if (dev_id < 0)
-		return dev_err_probe(&client->dev, dev_id, "Failed to read device ID\n");
+		return dev_err_probe(&client->dev, dev_id,
+				     "Failed to read device ID\n");
 
 	switch (dev_id) {
 	case MCP9600_DEVICE_ID_MCP9600:
-		dev_info(&client->dev, "Identified as mcp9600");
-		break;
 	case MCP9600_DEVICE_ID_MCP9601:
-		dev_info(&client->dev, "Identified as mcp9601");
+		if (dev_id != chip_info->chip_id)
+			dev_warn(&client->dev,
+				 "Expected id %02x but detected %02x. "
+				 "Ensure firmware description is correct\n",
+				 chip_info->chip_id, dev_id);
 		break;
 
 	default:
-		return dev_err_probe(&client->dev, -EINVAL, "Unknown device ID: %x\n",
-				     dev_id);
+		dev_warn(&client->dev, "Unknown id %x, using %x\n", dev_id,
+			 chip_info->chip_id);
 	}
 
 	indio_dev = devm_iio_device_alloc(&client->dev, sizeof(*data));
@@ -579,24 +579,33 @@ static int mcp9600_probe(struct i2c_client *client)
 		return -ENOMEM;
 
 	data = iio_priv(indio_dev);
-
-	ret = device_property_read_u32(&client->dev, "thermocouple-type", &data->thermocouple_type);
-        if (ret) {
-                dev_warn(&client->dev, "No 'thermocouple-type' DT property, using Type-K\n");
-                data->thermocouple_type = THERMOCOUPLE_TYPE_K;
-        }
-
-	data->dev_id = dev_id;
 	data->client = client;
+
+	/* Accept type from dt with default of Type-K. */
+	data->thermocouple_type = THERMOCOUPLE_TYPE_K;
+	ret = device_property_read_u32(&client->dev, "thermocouple-type",
+				       &data->thermocouple_type);
+	if (ret < 0 && ret != -EINVAL)
+		return dev_err_probe(&client->dev, ret,
+				     "Error reading thermocouple-type "
+				     "property\n");
+
+	if (data->thermocouple_type >= ARRAY_SIZE(mcp9600_type_map))
+		return dev_err_probe(&client->dev, -EINVAL,
+				     "Invalid thermocouple-type property %u.\n",
+				     data->thermocouple_type);
+
+	/* Set initial config. */
+	ret = mcp9600_config(data);
+	if (ret < 0)
+		return ret;
 
 	ch_sel = mcp9600_probe_alerts(indio_dev);
 	if (ch_sel < 0)
 		return ch_sel;
 
-	mcp9600_init(data);
-
 	indio_dev->info = &mcp9600_info;
-	indio_dev->name = "mcp9600";
+	indio_dev->name = chip_info->chip_name;
 	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->channels = mcp9600_channels[ch_sel];
 	indio_dev->num_channels = ARRAY_SIZE(mcp9600_channels[ch_sel]);
@@ -604,15 +613,27 @@ static int mcp9600_probe(struct i2c_client *client)
 	return devm_iio_device_register(&client->dev, indio_dev);
 }
 
+static const struct mcp_chip_info mcp9600_chip_info = {
+	.chip_id   = MCP9600_DEVICE_ID_MCP9600,
+	.chip_name = "mcp9600",
+};
+
+static const struct mcp_chip_info mcp9601_chip_info = {
+	.chip_id   = MCP9600_DEVICE_ID_MCP9601,
+	.chip_name = "mcp9601",
+};
+
 static const struct i2c_device_id mcp9600_id[] = {
-	{ "mcp9600" },
-	{}
+	{ "mcp9600", .driver_data = (kernel_ulong_t)&mcp9600_chip_info },
+	{ "mcp9601", .driver_data = (kernel_ulong_t)&mcp9601_chip_info },
+	{ }
 };
 MODULE_DEVICE_TABLE(i2c, mcp9600_id);
 
 static const struct of_device_id mcp9600_of_match[] = {
-	{ .compatible = "microchip,mcp9600" },
-	{}
+	{ .compatible = "microchip,mcp9600", .data = &mcp9600_chip_info },
+	{ .compatible = "microchip,mcp9601", .data = &mcp9601_chip_info },
+	{ }
 };
 MODULE_DEVICE_TABLE(of, mcp9600_of_match);
 
