@@ -22,7 +22,8 @@
 			ad7998: ad7998@23 {
 				compatible = "ad7998";
 				reg = <0x23>;
-				vcc-supply = <&sd_vcc_reg>;
+				vcc-supply = <&fixedregulator_3v0>;
+				vcc-supply-voltage = "3.0";
 				label = "UNKNOWN";
 				status = "okay";
 			};
