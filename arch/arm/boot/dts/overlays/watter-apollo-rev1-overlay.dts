@@ -74,6 +74,7 @@
 				reg = <0x60>;
 				thermocouple-type = <THERMOCOUPLE_TYPE_K>;
 				label = "shroud-ambient";
+				microchip,vsense;
 			};
 
 			thermo_2: mcp9600@61 {
@@ -81,6 +82,7 @@
 				reg = <0x61>;
 				thermocouple-type = <THERMOCOUPLE_TYPE_K>;
 				label = "water-loop";
+				microchip,vsense;
 			};
 
 			thermo_3: mcp9600@65 {
@@ -88,6 +90,7 @@
 				reg = <0x65>;
 				thermocouple-type = <THERMOCOUPLE_TYPE_K>;
 				label = "UNUSED";
+				microchip,vsense;
 			};
 
 			thermo_4: mcp9600@67 {
@@ -95,6 +98,7 @@
 				reg = <0x67>;
 				thermocouple-type = <THERMOCOUPLE_TYPE_K>;
 				label = "coolant";
+				microchip,vsense;
 			};
 
 			flow_1: pcf8593@51 {
