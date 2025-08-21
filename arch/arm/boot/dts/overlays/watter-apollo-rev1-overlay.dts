@@ -164,6 +164,25 @@
 		};
         };
 
+        fragment@6 {
+                target-path = "/"; 
+
+                __overlay__ {
+                        fixedregulator_3v0: fixedregulator_3v0 {
+                        compatible = "regulator-fixed";
+                        regulator-name = "3v0";
+                        regulator-min-microvolt = <3000000>; // 3.0V
+                        regulator-max-microvolt = <3000000>; // 3.0V
+                        regulator-always-on; // Regulator is always enabled
+                        };
+                };
+        };
+
+	__exports__ {
+		fixedregulator_3v0 = <&fixedregulator_3v0>;
+	};
+
+
 	__overrides__ {
 	};
 };
