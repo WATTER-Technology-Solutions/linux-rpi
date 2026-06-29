@@ -14,9 +14,9 @@
 				"ID_SCL", // GPIO1
 				"GPIO2", // GPIO2
 				"GPIO3", // GPIO3
-				"w1-hot-water-temp", // GPIO4
+				"valve-closed", // GPIO4
 				"water-pump", // GPIO5
-				"GPIO6", // GPIO6
+				"valve-opened", // GPIO6
 				"GPIO7", // GPIO7
 				"GPIO8", // GPIO8
 				"GPIO9", // GPIO9
@@ -27,7 +27,7 @@
 				"GPIO14", // GPIO14
 				"GPIO15", // GPIO15
 				"pc-power-button", // GPIO16
-				"GPIO17", // GPIO17
+				"valve-actuate", // GPIO17
 				"pc-exhaust-fan", // GPIO18
 				"GPIO19", // GPIO19
 				"GPIO20", // GPIO20
