@@ -18,6 +18,7 @@
 #include <linux/minmax.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
+#include <linux/delay.h>
 
 #include <linux/iio/events.h>
 #include <linux/iio/iio.h>
@@ -206,20 +207,26 @@ static int mcp9600_set_filter(struct iio_dev *indio_dev,
 			      unsigned int mode)
 {
 	struct mcp9600_data *data = iio_priv(indio_dev);
+	int new_type;
 
 	switch (mode) {
 	case MCP9600_FILTER_TYPE_NONE:
-		data->filter_enabled = 0;
+		new_type = 0;
 		break;
 
 	case MCP9600_FILTER_TYPE_EMA:
-		data->filter_enabled = 1;
+		new_type = 1;
 		break;
 
 	default:
 		return -EINVAL;
 	}
 
+	/* Do not reset the filter if we don't need to. */
+	if (data->filter_enabled == new_type)
+		return 0;
+
+	data->filter_enabled = new_type;
 	return mcp9600_config(data);
 }
 
@@ -261,10 +268,27 @@ static int mcp9600_read(struct mcp9600_data *data,
 {
 	int ret;
 
+	if (chan->address == MCP9600_HOT_JUNCTION) {
+		int i;
+
+		for (i = 0; i < 1000; i++) {
+			ret = i2c_smbus_read_byte_data(data->client, MCP9600_STATUS);
+			if (ret > 0 && ret & 0x40)
+				break;
+			mdelay(1);
+		}
+
+		if (i == 1000)
+			dev_err(&data->client->dev, "Could not get T(H) ready");
+	}
+
 	ret = i2c_smbus_read_word_swapped(data->client, chan->address);
 
 	if (ret < 0)
 		return ret;
+
+	if (chan->address == MCP9600_HOT_JUNCTION)
+		i2c_smbus_write_byte_data(data->client, MCP9600_STATUS, 0);
 
 	*val = sign_extend32(ret, 15);
 
@@ -312,12 +336,15 @@ static int mcp9600_read_avail(struct iio_dev *indio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_LOW_PASS_FILTER_3DB_FREQUENCY:
-		if (!data->filter_enabled)
-			return -EINVAL;
-
-		*vals = (int *)mcp_iir_coefficients_avail;
-		*type = IIO_VAL_INT_PLUS_MICRO;
-		*length = 2 * ARRAY_SIZE(mcp_iir_coefficients_avail);
+		if (!data->filter_enabled) {
+			*vals = NULL;
+			*length = 0;
+			*type = IIO_VAL_EMPTY;
+		} else {
+			*vals = (int *)mcp_iir_coefficients_avail;
+			*length = 2 * ARRAY_SIZE(mcp_iir_coefficients_avail);
+			*type = IIO_VAL_INT_PLUS_MICRO;
+		}
 		return IIO_AVAIL_LIST;
 	default:
 		return -EINVAL;
@@ -344,6 +371,10 @@ static int mcp9600_write_raw(struct iio_dev *indio_dev,
 
 		if (i == ARRAY_SIZE(mcp_iir_coefficients_avail))
 			return -EINVAL;
+
+		/* Do not reset the filter if there's no change. */
+		if (data->filter_level == i)
+			return 0;
 
 		data->filter_level = i;
 		return mcp9600_config(data);
@@ -594,7 +625,7 @@ static int mcp9600_probe_alerts(struct iio_dev *indio_dev)
 
 		ret = devm_request_threaded_irq(dev, irq, NULL,
 						mcp9600_alert_handler_func[i],
-						IRQF_ONESHOT, "mcp9600",
+						IRQF_ONESHOT, indio_dev->name,
 						indio_dev);
 		if (ret)
 			return ret;
@@ -661,13 +692,15 @@ static int mcp9600_probe(struct i2c_client *client)
 	if (ret)
 		return ret;
 
+	indio_dev->info = &mcp9600_info;
+	indio_dev->modes = INDIO_DIRECT_MODE;
+	indio_dev->name = chip_info->chip_name;
+
+	/* Probe alerts and set channels */
 	ch_sel = mcp9600_probe_alerts(indio_dev);
 	if (ch_sel < 0)
 		return ch_sel;
 
-	indio_dev->info = &mcp9600_info;
-	indio_dev->name = chip_info->chip_name;
-	indio_dev->modes = INDIO_DIRECT_MODE;
 	indio_dev->channels = mcp9600_channels[ch_sel];
 	indio_dev->num_channels = ARRAY_SIZE(mcp9600_channels[ch_sel]);
 
