@@ -14,7 +14,7 @@ here, then re-run it; the record and the prompt evolve together by pull request.
 | Security zone | WATTER-Guard (the kernel runs on the appliance's Raspberry Pi); built on an engineer's host |
 | Deployment profile | Residential by evidence (same controller as watter-collector); MEGAWATT unconfirmed |
 | Runtime identity | the kernel; sysfs, device nodes and boot files are governed by root and by the image's udev rules (outside this repo). `watter-build` runs as the invoking engineer |
-| Known facts outside the repo | From benmcollins, 2026-09-30, SEC-93 rollout: (1) engineering tooling runs in single-user arm64 Ubuntu Docker containers on developer laptops, or in single-user VMs, and all contents are destroyed after use; (2) the Raspberry Pi controller software is recorded in watter-collector `docs/security-requirements.md`, cross-referenced rather than re-described. Related SEC-93 records: watter-setup PR #3 (APT trust anchor, WATTER archive keyring), watter-tailnet PR #2 (Tailscale ACL, `tag:wattertop` is the RPi). |
+| Known facts outside the repo | From benmcollins, 2026-09-30, SEC-93 rollout: (1) engineering tooling runs in single-user arm64 Ubuntu Docker containers on developer laptops, or in single-user VMs, and all contents are destroyed after use; (2) the Raspberry Pi controller software is recorded in watter-collector `docs/security-requirements.md`, cross-referenced rather than re-described. Other related records are listed in Jira SEC-98. |
 | Previous record | none (first review) |
 | Prompt version | v2, 2026-09-01 |
 
